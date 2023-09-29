@@ -1,0 +1,634 @@
+---
+title: "HW2"
+author: "Vinu Kevin diesel"
+format: pdf
+editor: visual
+---
+
+# Transforming like a Data... Transformer
+
+## Required Step
+
+```{r}
+# Sets the repository to download packages from
+options(repos = list(CRAN = "http://cran.rstudio.com/"))
+
+# Sets the number of significant figures to two - e.g., 0.01
+options(digits = 2)
+
+# Required package for quick package downloading and loading 
+install.packages("pacman")
+
+# Downloads and load required packages
+pacman::p_load(dlookr, # Exploratory data analysis
+               forecast, # Needed for Box-Cox transformations
+               formattable, # HTML tables from R outputs
+               here, # Standardizes paths to data
+               kableExtra, # Alternative to formattable
+               knitr, # Needed to write HTML reports
+               missRanger, # To generate NAs
+               tidyverse, # Powerful data wrangling package suite
+               dplyr) 
+
+```
+
+## Load and Examine a Data Set
+
+```{r}
+# Get the Data
+
+# Read in with tidytuesdayR package 
+# Install from CRAN via: install.packages("tidytuesdayR")
+
+# Or read in the data manually
+
+winners <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-04-25/winners.csv')
+london_marathon <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-04-25/london_marathon.csv')
+
+# What does the data look like?
+london_marathon
+london_marathon |>
+  head() 
+
+winners |>
+  head() 
+
+```
+
+## Data Normality
+
+```{r}
+library(ggpubr)
+
+# Replace missing values with 0
+london_marathon$Applicants[is.na(london_marathon$Applicants)] <- 0
+
+
+# Creating a bar chart for no of applicants over the years
+
+gg1 <- ggplot(london_marathon, aes(x = Year, y = Applicants)) +
+  geom_bar(stat = "identity", fill = "#4E84C4") +
+  labs(title = "Number of Applicants over the Years",
+       x = "Year",
+       y = "Number of Applicants (in Thousands)") +
+  scale_x_continuous(name = "Year", breaks = seq(1980, 2022, 2)) +
+  scale_y_continuous(labels = scales::comma)  # Formating y-axis labels in thousands
+
+gg1
+
+# Creating a bar chart for no of Accepted applicants over the years
+  
+gg2 <- ggplot(london_marathon, aes(x = Year, y = Accepted)) +
+  geom_bar(stat = "identity", fill = "#4E84C4") +
+  labs(title = "Number of Accepted Applicants over the Years",
+       x = "Year",
+       y = "Number of Applicants (in Thousands)") +
+  scale_x_continuous(name = "Year", breaks = seq(1980, 2022, 2)) +
+  scale_y_continuous(labels = scales::comma)  # Formating y-axis labels in thousands
+
+gg2
+
+# Creating a bar chart for no of starters over the years
+
+
+gg3 <- ggplot(london_marathon, aes(x = Year, y = Starters)) +
+  geom_bar(stat = "identity", fill = "#4E84C4") +
+  labs(title = "Number of Accepted Applicants over the Years",
+       x = "Year",
+       y = "Number of Applicants (in Thousands)") +
+  scale_x_continuous(name = "Year", breaks = seq(1980, 2022, 2)) +
+  scale_y_continuous(labels = scales::comma)  # Formating y-axis labels in thousands
+
+gg3
+
+
+# Creating a bar chart for no of Finishers over the years
+
+
+gg4 <- ggplot(london_marathon, aes(x = Year, y = Finishers)) +
+  geom_bar(stat = "identity", fill = "#4E84C4") +
+  labs(title = "Number of Accepted Applicants over the Years",
+       x = "Year",
+       y = "Number of Applicants (in Thousands)") +
+  scale_x_continuous(name = "Year", breaks = seq(1980, 2022, 2)) +
+  scale_y_continuous(labels = scales::comma)  # Formating y-axis labels in thousands
+
+gg4
+
+# Creating a histogram for all categories of winners over the years
+
+# Filter the dataset for the specified categories
+
+data <- winners %>%
+  filter(Category %in% c("Men", "Women", "Wheelchair Men", "Wheelchair Women"))
+
+# Creating a histogram of counts
+ggplot(data, aes(x = Category)) +
+  geom_histogram(fill = "#4E84C4", color = "black", stat = "count") +
+  labs(title = "Frequency of Winners by Category", x = "Category", y = "Frequency") +
+  theme_minimal()
+
+```
+
+## Describing Properties of the Data (Refined)
+
+```{r}
+
+london_marathon |>
+  select(Applicants, Accepted, Starters, Finishers, Raised) |>
+  describe() |>
+  select(described_variables, skewness)
+
+```
+
+## Testing Normality (Accelerated)
+
+## Q-Q Plots amongst applicants
+
+```{r}
+london_marathon|>
+  plot_normality(Applicants, Accepted, Starters, Finishers, Raised)
+
+
+```
+
+\## Normality within a particular year range
+
+\### Q-Q Plots within 2015 to 2020
+
+```{r}
+
+london_marathon %>%
+  filter(Year >= 2015 & Year <= 2020) %>%
+  select(Applicants, Accepted, Starters, Finishers, Raised,Year) %>%
+  plot_normality()
+
+```
+
+## Transforming Data
+
+```{r}
+
+InsMod <- london_marathon |>   #Transforming the applicants columns
+  filter(Applicants > 0)  #Taking non zero values
+```
+
+### Square-root Transformation
+
+```{r}
+SqrdIns <- transform(InsMod$Applicants, method = "x^2")
+
+summary(SqrdIns)
+```
+
+```{r}
+SqrdIns |>
+  plot()
+
+```
+
+#### Logarithmic (+1) Transformation
+
+```{r}
+Log1Ins <- transform(InsMod$Applicants, method = "log+1") 
+
+summary(Log1Ins)
+
+
+```
+
+```{r}
+Log1Ins |>
+  plot()
+```
+
+#### Inverse Transformation
+
+```{r}
+InvIns <- transform(InsMod$Applicants, method = "1/x") 
+
+summary(InvIns)
+
+```
+
+```{r}
+InvIns |>
+  plot()
+```
+
+### Squared Transformation
+
+```{r}
+SqrdIns <- transform(InsMod$Applicants, method = "x^2") 
+
+summary(SqrdIns)
+```
+
+```{r}
+SqrdIns |>
+  plot()
+```
+
+#### Cubed Transformation
+
+```{r}
+CubeIns <- transform(InsMod$Applicants, method = "x^3") 
+
+summary(CubeIns)
+```
+
+```{r}
+CubeIns |>
+  plot()
+```
+
+### **Box-cox Transformation**
+
+```{r}
+BoxCoxIns <- transform(InsMod$Applicants, method = "Box-Cox") 
+
+summary(BoxCoxIns)
+```
+
+```{r}
+
+BoxCoxIns |>
+  plot()
+```
+
+# **Imputing like a Data Scientist**
+
+## **Required Setup**
+
+```{r}
+# Sets the number of significant figures to two - e.g., 0.01
+options(digits = 2)
+
+# Required package for quick package downloading and loading 
+if (!require(pacman))
+  install.packages("pacman")
+
+pacman::p_load(colorblindr, # Colorblind friendly pallettes
+               cluster, # K cluster analyses
+               dlookr, # Exploratory data analysis
+               formattable, # HTML tables from R outputs
+               ggfortify, # Plotting tools for stats
+               ggpubr, # Publishable ggplots
+               here, # Standardizes paths to data
+               kableExtra, # Alternative to formattable
+               knitr, # Needed to write HTML reports
+               missRanger, # To generate NAs
+               plotly, # Visualization package
+               rattle, # Decision tree visualization
+               rpart, # rpart algorithm
+               tidyverse, # Powerful data wrangling package suite
+               visdat, # Another EDA visualization package
+               Clara)
+
+# Set global ggplot() theme
+# Theme pub_clean() from the ggpubr package with base text size = 16
+theme_set(theme_pubclean(base_size = 16)) 
+# All axes titles to their respective far right sides
+theme_update(axis.title = element_text(hjust = 1))
+# Remove axes ticks
+theme_update(axis.ticks = element_blank()) 
+# Remove legend key
+theme_update(legend.key = element_blank())
+```
+
+## **Diagnose your Data**
+
+```{r}
+# What are the properties of the data
+view(london_marathon)
+
+london_marathon |>
+  diagnose() 
+
+winners |>
+  diagnose() 
+```
+
+### **Diagnose Outliers**
+
+```{r}
+london_marathon |>
+  diagnose_outlier() |>
+  filter(outliers_ratio > 0) |>  
+  mutate(rate = outliers_mean / with_mean) |>
+  arrange(desc(rate)) |> 
+  select(-outliers_cnt)
+```
+
+```{r}
+# Boxplots and histograms of data with and without outliers
+london_marathon |>
+  select(find_outliers(london_marathon)) |>
+           plot_outlier()
+```
+
+## **Basic Exploration of Missing Values (NAs)**
+
+```{r}
+
+# Randomly generate NAs for 30
+na.dataset <- london_marathon |>
+  generateNA(p = 0.3)
+
+# First six rows
+na.dataset |>
+head() |>
+  formattable()
+```
+
+```{r}
+# Create the NA table
+na.dataset |>
+  plot_na_pareto(only_na = TRUE, plot = FALSE) |>
+  formattable() # Publishable table
+```
+
+```{r}
+# Plot the insersect of the columns with missing values
+# This plot visualizes the table above
+na.dataset |>
+  plot_na_pareto(only_na = TRUE)
+```
+
+### Advanced Exploration of Missing Values (NAs)
+
+```{r}
+# Plot the intersect of the 5 columns with the most missing values
+# This means that some combinations of columns have missing values in the same row
+na.dataset |>
+  select(Applicants, Accepted, Starters, Finishers) |>
+  plot_na_intersect(only_na = TRUE) 
+
+
+```
+
+### **Determining if NA Observations are the Same**
+
+```{r }
+# Interactive plotly() plot of all NA values to examine every row
+na.dataset |>
+ select(Applicants, Accepted, Starters, Finishers) |>
+ vis_miss() |>
+ ggplotly() 
+```
+
+## **Impute Outliers and NAs**
+
+### **Classifying Outliers**
+
+```{r, warning = FALSE}
+library(gridExtra)
+
+# Box plot
+
+ plot1 <- ggplot(london_marathon, aes(x = Year, y = Applicants, fill = Applicants)) + # Create a ggplot
+  geom_boxplot(width = 0.5, outlier.size = 2, outlier.alpha = 0.5, fill = "green") +
+  xlab("Year") +  # Relabel the x axis label
+  ylab("Applicants") + # Remove the y axis label
+  theme(legend.position = "none")  # Remove the legend 
+
+plot2 <- ggplot(london_marathon, aes(x = Year, y = Accepted, fill = Accepted)) + # Create a ggplot
+  geom_boxplot(width = 0.5, outlier.size = 2, outlier.alpha = 0.5, fill = "blue") +
+  xlab("Year") +  # Relabel the x axis label
+  ylab("Accepted") + # Remove the y axis label
+  theme(legend.position = "none")  # Remove the legend
+
+
+plot3 <- ggplot(london_marathon, aes(x = Year, y = Starters, fill = Starters)) + # Create a ggplot
+  geom_boxplot(width = 0.5, outlier.size = 2, outlier.alpha = 0.5, fill = "yellow") +
+  xlab("Year") +  # Relabel the x axis label
+  ylab("Starters") + # Remove the y axis label
+  theme(legend.position = "none")  # Remove the legend
+
+
+plot4 <- ggplot(london_marathon, aes(x = Year, y = Finishers, fill = Finishers)) + # Create a ggplot
+  geom_boxplot(width = 0.5, outlier.size = 2, outlier.alpha = 0.5, fill = "red") +
+  xlab("Year") +  # Relabel the x axis label
+  ylab("Finishers") + # Remove the y axis label
+  theme(legend.position = "none")  # Remove the legend
+
+grid.arrange(plot1, plot2, plot3, plot4, ncol = 2)
+
+```
+
+### **Mean Imputation**
+
+```{r}
+# Raw summary, output suppressed
+mean_out_imp_Accepted <- london_marathon |>
+  select(Accepted) |>
+  filter(Accepted < 100000) |>
+  imputate_outlier(Accepted, method = "mean")
+
+# Output showing the summary statistics of our imputation
+mean_out_imp_Accepted |>
+  summary() 
+```
+
+```{r}
+# Visualization of the mean imputation
+mean_out_imp_Accepted |>
+  plot()
+```
+
+### **Median Imputation**
+
+```{r}
+# Raw summary, output suppressed
+med_out_imp_Accepted <- london_marathon |>
+  select(Accepted) |>
+  filter(Accepted < 100000) |>
+  imputate_outlier(Accepted, method = "median")
+
+# Output showing the summary statistics of our imputation
+med_out_imp_Accepted |>
+  summary() 
+```
+
+```{r}
+# Visualization of the median imputation
+med_out_imp_Accepted |>
+  plot()
+```
+
+### **Mode Imputation**
+
+```{r}
+# Raw summary, output suppressed
+mode_out_imp_Accepted <- london_marathon |>
+  select(Accepted) |>
+  filter(Accepted < 100000) |>
+  imputate_outlier(Accepted, method = "mode")
+
+# Output showing the summary statistics of our imputation
+mode_out_imp_Accepted |>
+  summary() 
+```
+
+```{r}
+# Visualization of the median imputation
+mode_out_imp_Accepted |>
+  plot()
+```
+
+### **Capping Imputation (aka Winsorizing)**
+
+```{r}
+# Raw summary, output suppressed
+cap_out_imp_Accepted <- london_marathon |>
+  select(Accepted) |>
+  filter(Accepted < 100000) |>
+  imputate_outlier(Accepted, method = "capping")
+
+# Output showing the summary statistics of our imputation
+cap_out_imp_Accepted |>
+  summary() 
+```
+
+```{r}
+cap_out_imp_Accepted |>
+  plot()
+
+```
+
+## **Imputing NAs**
+
+### **K-Nearest Neighbor (KNN) Imputation**
+
+```{r}
+# KNN plot of our dataset without categories
+autoplot(clara(winners, 3)) 
+```
+
+### **Recursive Partitioning and Regression Trees (rpart)**
+
+```{r}
+# Raw summary, output suppressed
+london_marathon_temp <- london_marathon %>% select(-`Official charity`)
+rpart <- london_marathon_temp |>
+  imputate_na(Accepted, method = "rpart") #Imputing the Accepted column as it has NA values
+
+# Plot showing the results of our imputation
+rpart |>
+  plot()
+```
+
+### **Multivariate Imputation by Chained Equations (MICE)**
+
+```{r}
+# Raw summary, output suppressed
+mice <- london_marathon_temp |>
+  imputate_na(Accepted, method = "mice", seed = 123)
+```
+
+```{r}
+# Plot showing the results of our imputation
+mice |>
+  plot()
+```
+
+# **Correlating Like a Data Master**
+
+### **Required setup**
+
+```{r}
+if (!require(pacman))
+  install.packages("pacman")
+
+pacman::p_load(colorblindr,
+       dlookr,
+       formattable,
+       GGally,
+       ggdist,
+       ggpubr,
+       ggridges,
+       here,
+       tidyverse)
+
+# Set global ggplot() theme
+# Theme pub_clean() from the ggpubr package with base text size = 16
+theme_set(theme_pubclean(base_size = 12)) 
+# All axes titles to their respective far right sides
+theme_update(axis.title = element_text(hjust = 1))
+# Remove axes ticks
+theme_update(axis.ticks = element_blank()) 
+# Remove legend key
+theme_update(legend.key = element_blank())
+```
+
+## **Describe and Visualize Correlations**
+
+```{r}
+# Table of correlations between numerical variables (we are sticking to the default Pearson's r coefficient)
+correlate(london_marathon) |>
+  formattable()
+
+
+
+```
+
+```{r}
+# Correlation matrix of numerical variables
+
+london_marathon |>
+plot_correlate()
+```
+
+## **Visualize Correlations within Groups**
+
+```{r}
+# Can't be done as there are no groups present in the london_marathon dataset
+# Winners dataset also has only columns which are character, hence correlating doesn't make sense
+
+```
+
+## **Describe and Visualize Relationships Based on Target Variables**
+
+### **Numerical Target Variables: Numerical Variable of Interest**
+
+```{r}
+# First, we need to remove NAs, they cause an error
+dataset.noNA <- london_marathon |> 
+  drop_na()
+
+# The numerical predictor variable that we want
+num <- target_by(dataset.noNA, Starters)
+
+# Relating the variable of interest to the numerical target variable
+num_num <- relate(num, Finishers)
+
+# Summary of the regression analysis - the same as the summary from lm(Formula)
+summary(num_num)
+
+```
+
+```{r}
+# Plotting the linear relationship
+plot(num_num)
+```
+
+### **Numerical Target Variables: Categorical Variable of Interest**
+
+```{r}
+# Categories exists only in the winners dataset and there aren't any categorical values to target for, 
+# thus this section isn't applicable for this dataset
+```
+
+### **Categorical Target Variables: Numerical Variable of Interest**
+
+```{r}
+# Categories exists only in the winners dataset and there aren't any numeric columns to target for, 
+# thus this section isn't applicable for this dataset
+```
+
+### **Categorical Target Variables: Categorical Variable of Interest**
+
+```{r}
+# There is only one category in winner dataset and can't produce any other categories as there
+# are no numeric columns
+```
