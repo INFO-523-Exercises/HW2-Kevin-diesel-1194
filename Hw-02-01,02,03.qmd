@@ -614,21 +614,15 @@ plot(num_num)
 
 ### **Numerical Target Variables: Categorical Variable of Interest**
 
-```{r}
-# Categories exists only in the winners dataset and there aren't any categorical values to target for, 
-# thus this section isn't applicable for this dataset
-```
+Categories exists only in the winners dataset and there aren't any categorical values to target for,
+thus this section isn't applicable for this dataset
 
 ### **Categorical Target Variables: Numerical Variable of Interest**
 
-```{r}
-# Categories exists only in the winners dataset and there aren't any numeric columns to target for, 
-# thus this section isn't applicable for this dataset
-```
+Categories exists only in the winners dataset and there aren't any numeric columns to target for,
+thus this section isn't applicable for this dataset
 
 ### **Categorical Target Variables: Categorical Variable of Interest**
 
-```{r}
-# There is only one category in winner dataset and can't produce any other categories as there
+There is only one category in winner dataset and can't produce any other categories as there
 # are no numeric columns
-```
